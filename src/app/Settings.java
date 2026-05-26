@@ -17,9 +17,9 @@ public class Settings {
         }
     }
 
-    public static String getHost()               { return props.getProperty("server.host", "localhost"); }
-    public static int    getPort()               { return Integer.parseInt(props.getProperty("server.port", "7777")); }
-    public static String getServerType()         { return props.getProperty("server.type", "blocking"); }
-    public static int    getTimeoutMs()          { return Integer.parseInt(props.getProperty("server.timeout.ms", "30000")); }
-    public static long   getWatchdogPeriodMs()   { return Long.parseLong(props.getProperty("server.watchdog.period.ms", "10000")); }
+    public static String getHost()             { return props.getProperty("server.host", "localhost"); }
+    public static int    getPort()             { return Integer.parseInt(props.getProperty("server.port", "7777")); }
+    public static String getServerType()       { return props.getProperty("server.type", "blocking"); }
+    public static int    getTimeoutMs()        { return Integer.parseInt(props.getProperty("server.timeout.ms", "30000")); }
+    public static long   getKeepalivePeriodMs(){ return Long.parseLong(props.getProperty("server.keepalive.period.ms", "10000")); }
 }

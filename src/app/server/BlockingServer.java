@@ -2,18 +2,20 @@ package app.server;
 
 import app.Settings;
 import app.message.BroadcastMessage;
-import app.message.WatchdogMessage;
 
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 public class BlockingServer {
-
-    private final List<app.server.ClientHandler> clients = new CopyOnWriteArrayList<>();
+    private final List<ClientHandler> clients = new CopyOnWriteArrayList<>();
+    private final Deque<BroadcastMessage> history = new ArrayDeque<>();
+    private static final int HISTORY_SIZE = 10;
 
     public boolean isUsernameTaken(String username) {
         return clients.stream().anyMatch(c -> username.equalsIgnoreCase(c.getUsername()));
@@ -32,29 +34,22 @@ public class BlockingServer {
     }
 
     public void broadcast(BroadcastMessage message) {
+        synchronized (history) {
+            if (history.size() >= HISTORY_SIZE) history.pollFirst();
+            history.addLast(message);
+        }
         for (var client : clients) {
             client.send(message);
         }
     }
 
-    private void startWatchdog() {
-        var scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-            var t = new Thread(r, "watchdog");
-            t.setDaemon(true);
-            return t;
-        });
-        scheduler.scheduleAtFixedRate(() -> {
-            int count = clients.size();
-            if (count == 0) return;
-            var msg = new WatchdogMessage(count);
-            for (var client : clients) {
-                client.send(msg);
-            }
-        }, Settings.getWatchdogPeriodMs(), Settings.getWatchdogPeriodMs(), TimeUnit.MILLISECONDS);
+    public List<BroadcastMessage> getHistory() {
+        synchronized (history) {
+            return new ArrayList<>(history);
+        }
     }
 
     public void start() throws IOException {
-        startWatchdog();
         var pool = Executors.newCachedThreadPool();
         try (var ss = new ServerSocket(Settings.getPort())) {
             System.out.println("Blocking chat server on port " + Settings.getPort());

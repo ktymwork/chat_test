@@ -2,7 +2,6 @@ package app.client;
 
 import app.message.BroadcastMessage;
 import app.message.Message;
-import app.message.WatchdogMessage;
 
 import java.io.ObjectInputStream;
 import java.time.ZoneId;
@@ -23,13 +22,8 @@ public class Receiver implements Runnable {
             while (true) {
                 var msg = (Message) in.readObject();
                 if (msg instanceof BroadcastMessage bm) {
-                    // \r — перетираем строку с ">>> " чтобы сообщение вышло чисто
-                    System.out.println("\r[" + FMT.format(bm.getTimestamp()) + "] "
+                    System.out.println("[" + FMT.format(bm.getTimestamp()) + "] "
                             + bm.getUsername() + ": " + bm.getText());
-                    System.out.print(">>> ");
-                } else if (msg instanceof WatchdogMessage wm) {
-                    System.out.println("\r[server] participants online: " + wm.getParticipantCount());
-                    System.out.print(">>> ");
                 }
             }
         } catch (Exception e) {

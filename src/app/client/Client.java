@@ -2,6 +2,7 @@ package app.client;
 
 import app.Settings;
 import app.message.ChatMessage;
+import app.message.PingMessage;
 import app.message.RegisterAckMessage;
 import app.message.RegisterMessage;
 
@@ -18,12 +19,11 @@ public class Client {
         var username = scanner.nextLine().strip();
 
         var socket = new Socket(Settings.getHost(), Settings.getPort());
-        socket.setSoTimeout(0); // клиент не таймаутит — Receiver обработает разрыв сам
+        socket.setSoTimeout(0);
 
         var out = new ObjectOutputStream(socket.getOutputStream());
         var in  = new ObjectInputStream(socket.getInputStream());
 
-        // Регистрация
         out.writeObject(new RegisterMessage(username));
         out.flush();
 
@@ -34,22 +34,34 @@ public class Client {
             return;
         }
         System.out.println("Joined as '" + username + "'. Type messages below, 'exit' to quit.");
-        System.out.print(">>> ");
 
-        // Поток приёма сообщений от сервера
         var receiver = new Thread(new Receiver(in), "receiver");
         receiver.setDaemon(true);
         receiver.start();
 
-        // Основной поток: читаем консоль и шлём сообщения
-        while (scanner.hasNextLine()) {
+        var keepalive = new Thread(() -> {
+            try {
+                while (true) {
+                    Thread.sleep(Settings.getKeepalivePeriodMs() / 2);
+                    synchronized (out) {
+                        out.writeObject(new PingMessage());
+                        out.flush();
+                    }
+                }
+            } catch (Exception ignored) {}
+        }, "keepalive");
+        keepalive.setDaemon(true);
+        keepalive.start();
+
+        while (true) {
             var text = scanner.nextLine();
             if ("exit".equalsIgnoreCase(text.strip())) break;
             if (!text.isBlank()) {
-                out.writeObject(new ChatMessage(text));
-                out.flush();
+                synchronized (out) {
+                    out.writeObject(new ChatMessage(text));
+                    out.flush();
+                }
             }
-            System.out.print(">>> ");
         }
 
         socket.close();

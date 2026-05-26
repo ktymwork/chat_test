@@ -23,7 +23,6 @@ public class ClientHandler implements Runnable {
         return username;
     }
 
-    // synchronized — защищает от одновременной записи из broadcast и watchdog потоков
     public synchronized void send(Message message) {
         try {
             out.writeObject(message);
@@ -36,11 +35,10 @@ public class ClientHandler implements Runnable {
     @Override
     public void run() {
         try {
-            socket.setSoTimeout(Settings.getTimeoutMs()); // таймаут простоя
+            socket.setSoTimeout(Settings.getTimeoutMs());
             out = new ObjectOutputStream(socket.getOutputStream());
             var in = new ObjectInputStream(socket.getInputStream());
 
-            // 1. Регистрация
             var reg = (RegisterMessage) in.readObject();
             username = reg.getUsername().strip();
 
@@ -54,16 +52,17 @@ public class ClientHandler implements Runnable {
             send(new RegisterAckMessage(true, null));
             System.out.println("[+] " + username + " joined. Online: " + server.clientCount());
 
-            // 2. Основной цикл приёма сообщений
             while (true) {
                 var msg = (Message) in.readObject();
                 if (msg instanceof ChatMessage chat) {
                     server.broadcast(new BroadcastMessage(username, chat.getText(), Instant.now()));
+                } else if (msg instanceof PingMessage) {
+
                 }
             }
 
         } catch (Exception e) {
-            // Клиент отключился, таймаут, или ошибка — просто выходим
+
         } finally {
             server.unregister(this);
             if (username != null) {
