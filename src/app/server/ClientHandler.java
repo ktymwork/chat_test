@@ -50,6 +50,11 @@ public class ClientHandler implements Runnable {
 
             server.register(this);
             send(new RegisterAckMessage(true, null));
+
+            for (var msg : server.getHistory()) {
+                send(msg);
+            }
+
             System.out.println("[+] " + username + " joined. Online: " + server.clientCount());
 
             while (true) {
@@ -72,3 +77,4 @@ public class ClientHandler implements Runnable {
         }
     }
 }
+
